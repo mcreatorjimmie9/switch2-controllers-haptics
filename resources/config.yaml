@@ -85,3 +85,12 @@ mouse:
       left_button: R
       middle_button: R_STK
       right_button: ZR
+haptics_singer:
+  # Playback loop interval in microseconds. Lower = better fidelity, higher CPU usage.
+  # Default: 10000 (10ms). Range: 1000-100000.
+  interval_usec: 10000
+  # Default amplitude for haptic playback (0-1023). Higher = stronger vibration.
+  default_amplitude: 512
+  # Whether to also use the low-frequency rumble motor for richer feel.
+  # The LF motor adds a subtle rumble underneath the HF tone.
+  use_lf_rumble: true

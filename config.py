@@ -121,6 +121,18 @@ class MouseConfig:
 
 
 @dataclass
+class HapticsSingerConfig:
+    interval_usec: int
+    default_amplitude: int
+    use_lf_rumble: bool
+
+    def __init__(self, config_dict: dict):
+        self.interval_usec = config_dict.get("interval_usec", 10000)
+        self.default_amplitude = config_dict.get("default_amplitude", 512)
+        self.use_lf_rumble = config_dict.get("use_lf_rumble", True)
+
+
+@dataclass
 class Config:
     combine_joycons: bool
     deadzone: int
@@ -129,6 +141,7 @@ class Config:
     single_joycon_r_config: ButtonConfig
     procon_config: ButtonConfig
     mouse_config: MouseConfig
+    haptics_singer_config: HapticsSingerConfig
 
     def __init__(self, config_file_path: str):
 
@@ -146,6 +159,8 @@ class Config:
             self.procon_config = ButtonConfig(buttons_config["procon"])
 
             self.mouse_config = MouseConfig(config["mouse"])
+
+            self.haptics_singer_config = HapticsSingerConfig(config.get("haptics_singer", {}))
 
         logger.info(f"Config successfully read {self}")
 
