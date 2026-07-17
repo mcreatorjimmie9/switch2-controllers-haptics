@@ -3,7 +3,7 @@ name: Build Windows Executable
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -23,28 +23,26 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        shell: pwsh
+        shell: cmd
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller bleak PyYAML pywin32 vgamepad
           pip install winrt-runtime winrt-Windows.Devices.Bluetooth winrt-Windows.Devices.Bluetooth.Advertisement winrt-Windows.Devices.Bluetooth.GenericAttributeProfile winrt-Windows.Devices.Enumeration winrt-Windows.Foundation winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams
-          # Try PyBluez from PyPI first (pre-built wheels), fall back to stub
-          pip install pybluez 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "PyBluez from PyPI failed, creating stub for build"
-            New-Item -ItemType Directory -Force -Path "bluetooth_stub" | Out-Null
-            Set-Content -Path "bluetooth_stub/__init__.py" -Value @'
-# Stub bluetooth module - real PyBluez needed at runtime
-# Install: pip install "PyBluez @ git+https://github.com/pybluez/pybluez.git@82cbba8a1ebd4c1e3442dfafd8581d58c50fa39e"
-def read_local_bdaddr():
-    return ("00:00:00:00:00:00", 0)
-'@
-            $env:PYTHONPATH = "$PWD\bluetooth_stub;$env:PYTHONPATH"
-          }
+          pip install pybluez || echo "PyBluez not available, using stub"
+
+      - name: Create bluetooth stub if needed
+        shell: cmd
+        run: |
+          python -c "import bluetooth" 2>nul && echo "bluetooth OK" || (
+            mkdir bluetooth_stub
+            echo def read_local_bdaddr(): return ("00:00:00:00:00:00", 0) > bluetooth_stub\__init__.py
+            set PYTHONPATH=bluetooth_stub;%PYTHONPATH%
+          )
 
       - name: Build with PyInstaller
-        shell: pwsh
+        shell: cmd
         run: |
+          set PYTHONPATH=bluetooth_stub;%PYTHONPATH%
           pyinstaller gui.py --add-data "resources;resources" --collect-binaries=vgamepad --onefile --name "switch2-controllers-haptics" --noconfirm --hidden-import=bluetooth
 
       - name: Upload artifact
@@ -62,27 +60,18 @@ def read_local_bdaddr():
           body: |
             Switch 2 Controllers with MIDI Haptics Singer
 
-            Based on [Nadeflore/switch2-controllers](https://github.com/Nadeflore/switch2-controllers) with [SteamHapticsSinger](https://github.com/CrazyCritic89/SteamHapticsSinger) integration.
+            Based on Nadeflore/switch2-controllers with SteamHapticsSinger integration.
 
-            ## Features
-            - Connect Joy-Con 2 (left/right), Pro Controller 2, NSO GameCube Controller to PC via Bluetooth
+            Features:
+            - Connect Joy-Con 2, Pro Controller 2, NSO GameCube Controller via Bluetooth
             - Virtual XInput gamepad emulation
             - Mouse mode for Joy-Cons
-            - **MIDI Haptics Singer** - Play MIDI files through Joy-Con HD Rumble motors
-              - MIDI Channel 0 → Right Joy-Con
-              - MIDI Channel 1 → Left Joy-Con
+            - MIDI Haptics Singer - Play MIDI files through Joy-Con HD Rumble motors
             - Configurable button mapping, deadzone, sensitivity
 
-            ## Usage
-            1. Run `switch2-controllers-haptics.exe`
-            2. Connect your Joy-Cons (press a button or hold sync to pair)
-            3. Use the "MIDI Haptics Singer" panel at the bottom to load and play `.mid` files
-
-            ## Prerequisites
-            - Windows 10/11 with Bluetooth
-            - [ViGEmBus driver](https://github.com/nefarius/ViGEmBus) (for virtual gamepad)
+            Prerequisites: Windows 10/11 with Bluetooth, ViGEmBus driver
           files: dist/switch2-controllers-haptics.exe
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
