@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -23,11 +23,16 @@ jobs:
           mkdir -p bluetooth_stub
           echo 'def read_local_bdaddr(): return ("00:00:00:00:00:00", 0)' > bluetooth_stub/__init__.py
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Install dependencies
-        run: uv pip install --system pyinstaller bleak PyYAML pywin32 vgamepad winrt-runtime winrt-Windows.Devices.Bluetooth winrt-Windows.Devices.Bluetooth.Advertisement winrt-Windows.Devices.Bluetooth.GenericAttributeProfile winrt-Windows.Devices.Enumeration winrt-Windows.Foundation winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams
+      - name: Install core deps (wheels only)
+        run: pip install --only-binary=:all: pyinstaller bleak PyYAML pywin32 vgamepad || pip install pyinstaller bleak PyYAML pywin32 vgamepad
+
+      - name: Install winrt deps
+        run: pip install winrt-runtime winrt-Windows.Devices.Bluetooth winrt-Windows.Devices.Bluetooth.Advertisement winrt-Windows.Devices.Bluetooth.GenericAttributeProfile winrt-Windows.Devices.Enumeration winrt-Windows.Foundation winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams
 
       - name: Build with PyInstaller
         env:
