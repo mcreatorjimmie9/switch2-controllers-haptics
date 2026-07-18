@@ -1,8 +1,6 @@
 name: Build Windows Executable
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch: {}
 
 permissions:
@@ -11,7 +9,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -28,10 +26,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          pip install --prefer-binary pyinstaller bleak PyYAML pywin32 vgamepad
-          pip install --prefer-binary winrt-runtime winrt-Windows.Devices.Bluetooth winrt-Windows.Devices.Bluetooth.Advertisement winrt-Windows.Devices.Bluetooth.GenericAttributeProfile winrt-Windows.Devices.Enumeration winrt-Windows.Foundation winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams
+      - name: Install core deps
+        run: pip install --prefer-binary pyinstaller bleak PyYAML pywin32 vgamepad
+
+      - name: Install winrt deps
+        run: pip install --prefer-binary --no-deps winrt-runtime winrt-Windows.Devices.Bluetooth winrt-Windows.Devices.Bluetooth.Advertisement winrt-Windows.Devices.Bluetooth.GenericAttributeProfile winrt-Windows.Devices.Enumeration winrt-Windows.Foundation winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams
 
       - name: Build with PyInstaller
         env:
@@ -45,7 +44,6 @@ jobs:
           path: dist/switch2-controllers-haptics.exe
 
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v1.0.${{ github.run_number }}"
